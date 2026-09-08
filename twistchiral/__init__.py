@@ -17,13 +17,13 @@ from .analysis import (geometry_at, analytic_two_volume_chirality, screw_predict
                        localization_profile, relative_phase_invariance, mirror_comparison, ladder_existence,
                        interface_chirality_summary)
 from .systems import twisted_pair, cluster, wave_set
-from . import exact, geometry, highdim, slices, style, viz
+from . import exact, exact12, geometry, highdim, slices, style, viz
 
 __all__ = [
     "ExteriorAlgebra", "WaveSystem", "WaveVolume", "quantum_geometry", "chirality_ladder", "rotation_planes",
     "twist_rank", "sample_interface", "sample_junction", "project_to_interface", "project_to_junction",
     "visibility", "geometry_at", "analytic_two_volume_chirality", "screw_prediction", "direction_spectrum",
     "localization_profile", "relative_phase_invariance", "mirror_comparison", "ladder_existence",
-    "interface_chirality_summary", "twisted_pair", "cluster", "wave_set", "exact", "geometry", "highdim", "slices", "style", "viz",
+    "interface_chirality_summary", "twisted_pair", "cluster", "wave_set", "exact", "exact12", "geometry", "highdim", "slices", "style", "viz",
 ]
 __version__ = "0.1.0"
