@@ -21,20 +21,66 @@ from typing import Sequence
 import numpy as np
 
 
-def _as_precision(width, n: int) -> np.ndarray | None:
-    """Turn a width specification into a precision matrix (inverse covariance)."""
+class _Precision:
+    """Inverse covariance of the envelope, stored as compactly as possible:
+    a scalar (isotropic width), a vector (axis-aligned widths) or a full
+    matrix.  All operations are O(n) unless the matrix form is used."""
+
+    def __init__(self, width, n: int):
+        w = np.asarray(width, dtype=float)
+        self.n = n
+        if w.ndim == 0:
+            self.kind, self.value = "scalar", 1.0 / float(w) ** 2
+        elif w.ndim == 1:
+            if w.shape[0] != n:
+                raise ValueError("width vector must have length n")
+            self.kind, self.value = "diag", 1.0 / w**2
+        else:
+            if w.shape != (n, n):
+                raise ValueError("width matrix must be (n, n)")
+            self.kind, self.value = "full", np.linalg.inv(w)   # a matrix is a covariance
+
+    def apply_rows(self, Y: np.ndarray) -> np.ndarray:
+        """``Y @ L`` for row vectors ``Y (P, n)``."""
+        if self.kind == "scalar":
+            return Y * self.value
+        if self.kind == "diag":
+            return Y * self.value[None, :]
+        return Y @ self.value
+
+    def apply(self, c: np.ndarray) -> np.ndarray:
+        """``L @ c`` for one vector."""
+        if self.kind == "scalar":
+            return c * self.value
+        if self.kind == "diag":
+            return c * self.value
+        return self.value @ c
+
+    def log_eigenvalues(self) -> np.ndarray:
+        if self.kind == "scalar":
+            return np.full(self.n, np.log(self.value))
+        if self.kind == "diag":
+            return np.log(self.value)
+        return np.log(np.linalg.eigvalsh(self.value))
+
+    def equals(self, other: "_Precision") -> bool:
+        if self.kind == other.kind:
+            return bool(np.allclose(self.value, other.value))
+        return bool(np.allclose(self.dense(), other.dense()))
+
+    def dense(self) -> np.ndarray:
+        if self.kind == "scalar":
+            return np.eye(self.n) * self.value
+        if self.kind == "diag":
+            return np.diag(self.value)
+        return self.value
+
+
+def _as_precision(width, n: int):
+    """Turn a width specification into a compact precision object."""
     if width is None:
         return None
-    w = np.asarray(width, dtype=float)
-    if w.ndim == 0:
-        return np.eye(n) / float(w) ** 2
-    if w.ndim == 1:
-        if w.shape[0] != n:
-            raise ValueError("width vector must have length n")
-        return np.diag(1.0 / w**2)
-    if w.shape != (n, n):
-        raise ValueError("width matrix must be (n, n)")
-    return np.linalg.inv(w)  # interpret a matrix as a covariance
+    return _Precision(width, n)
 
 
 def dispersion_frequencies(K: np.ndarray, dispersion, speed: float = 1.0) -> np.ndarray:
@@ -100,7 +146,7 @@ class WaveVolume:
         """A representative width (geometric mean of the principal widths)."""
         if self._prec is None:
             return np.inf
-        return float(np.exp(-0.5 * np.mean(np.log(np.linalg.eigvalsh(self._prec)))))
+        return float(np.exp(-0.5 * np.mean(self._prec.log_eigenvalues())))
 
     # ------------------------------------------------------------------ evaluation
     def evaluate(self, X, t: float = 0.0, relative_envelope: bool = False):
@@ -121,12 +167,12 @@ class WaveVolume:
             return S, dS
         c = self.center_at(t)
         if relative_envelope:
-            Lc = self._prec @ c                                  # (n,)
+            Lc = self._prec.apply(c)                             # (n,)
             G = np.exp(X @ Lc - 0.5 * (c @ Lc))                  # (P,)
             dG = G[:, None] * Lc[None, :]
         else:
             Y = X - c[None, :]
-            LY = Y @ self._prec                                  # (P, n)
+            LY = self._prec.apply_rows(Y)                        # (P, n)
             G = np.exp(-0.5 * np.einsum("pi,pi->p", Y, LY))     # (P,)
             dG = -G[:, None] * LY                                # (P, n)
         psi = G * S
@@ -136,9 +182,9 @@ class WaveVolume:
     def field(self, X, t: float = 0.0) -> np.ndarray:
         return self.evaluate(X, t)[0]
 
-    def local_wavevector(self, X, t: float = 0.0) -> np.ndarray:
+    def local_wavevector(self, X, t: float = 0.0, relative_envelope: bool = False) -> np.ndarray:
         """Phase gradient ``Im(conj(psi) grad psi) / |psi|^2``."""
-        psi, dpsi = self.evaluate(X, t)
+        psi, dpsi = self.evaluate(X, t, relative_envelope=relative_envelope)
         I = np.abs(psi) ** 2
         return (np.conj(psi)[:, None] * dpsi).imag / np.maximum(I, 1e-300)[:, None]
 
@@ -200,7 +246,7 @@ class WaveSystem:
         self.relative_envelope = bool(relative_envelope)
         if self.relative_envelope:
             precs = [v._prec for v in self.volumes]
-            if any(p is None for p in precs) or any(not np.allclose(p, precs[0]) for p in precs):
+            if any(p is None for p in precs) or any(not p.equals(precs[0]) for p in precs):
                 raise ValueError("relative_envelope needs equal Gaussian widths for all volumes")
 
     # ------------------------------------------------------------------ basics

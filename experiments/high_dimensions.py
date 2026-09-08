@@ -23,7 +23,7 @@ from twistchiral.interface import log_amplitude_ratio, project_to_interface
 from twistchiral.slices import plane_grid
 from twistchiral.waves import WaveSystem, WaveVolume
 
-N_LIST = [int(x) for x in os.environ.get("TC_NS", "3,4,6,8,12,16,24,32,48,64,96,128,192,256,384,512,768,1024,1536,2048,3072,4096,6144,8192,12288,16384").split(",")]
+N_LIST = [int(x) for x in os.environ.get("TC_NS", "3,4,6,8,12,16,24,32,48,64,96,128,192,256,384,512,768,1024,1536,2048,3072,4096,6144,8192,12288,16384,24576,32768,49152,65536").split(",")]
 STRUCT_CAP = int(os.environ.get("TC_STRUCT_CAP", "2048"))     # largest n for volumes with ~n waves
 POINTS = int(os.environ.get("TC_POINTS", "1200"))
 
@@ -77,7 +77,7 @@ def run(seed: int = 0) -> dict:
 
     with Timer("E1 two-volume interface statistics vs n"):
         for n in N_LIST:
-            P = POINTS if n < 8192 else max(300, POINTS // 2)
+            P = POINTS if n < 8192 else (max(300, POINTS // 2) if n < 24576 else max(200, POINTS // 4))
             for kind in kinds:
                 if kind in ("n+1 equal waves (simplex)", "2n random waves") and n > STRUCT_CAP:
                     for dct in (d_eff, d_pop, d_var, mirror, seconds, kept):
@@ -106,7 +106,7 @@ def run(seed: int = 0) -> dict:
                     saturation_cfg.append(float(sat_cfg))
                     saturation_field.append(float(np.median(ratio)))
                     # closed form via Gram determinants
-                    ka, kb = S[0].local_wavevector(X), S[1].local_wavevector(X)
+                    ka, kb = S[0].local_wavevector(X, relative_envelope=True), S[1].local_wavevector(X, relative_envelope=True)
                     M = np.stack([ka, kb, 0.5 * gh], axis=1)
                     vol = np.sqrt(np.clip(np.linalg.det(M @ np.swapaxes(M, 1, 2)), 0, None))
                     closed_form_err.append(float(np.abs(g["norms"][3] - 0.5 * V2 * vol).max() / (0.5 * V2 * vol).max()))

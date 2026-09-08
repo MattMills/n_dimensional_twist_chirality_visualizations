@@ -38,8 +38,9 @@ def analytic_two_volume_chirality(system: WaveSystem, X, t: float = 0.0, a: int 
     well defined).
     """
     ea = ea or ExteriorAlgebra(system.n)
-    ka = system[a].local_wavevector(X, t)
-    kb = system[b].local_wavevector(X, t)
+    rel = getattr(system, "relative_envelope", False)
+    ka = system[a].local_wavevector(X, t, relative_envelope=rel)
+    kb = system[b].local_wavevector(X, t, relative_envelope=rel)
     h, gh = log_amplitude_ratio(system, X, a, b, t)   # h = 2 ln(A_a/A_b)
     grad_ln_ratio = 0.5 * gh                           # grad ln(A_a/A_b)
     V2 = 1.0 / np.cosh(0.5 * h) ** 2
