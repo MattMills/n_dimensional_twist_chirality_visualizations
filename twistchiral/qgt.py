@@ -29,7 +29,7 @@ import numpy as np
 from .exterior import ExteriorAlgebra
 
 
-def quantum_geometry(Psi: np.ndarray, dPsi: np.ndarray, floor: float = 0.0) -> dict:
+def quantum_geometry(Psi: np.ndarray, dPsi: np.ndarray, floor: float = 1e-290) -> dict:
     """Berry connection, quantum metric and curvature of a spinor field.
 
     Parameters
