@@ -49,15 +49,17 @@ def make_pair(n, kind, rng, k_scale=3.0, width=1.0, d_norm=1.2):
     K2 = random_frame_image(K, rng)
     v1 = WaveVolume(k=K, center=-0.5 * d, width=width, amplitudes=amp)
     v2 = WaveVolume(k=K2, center=0.5 * d, width=width, amplitudes=amp)
-    return WaveSystem([v1, v2]), d
+    # the common Gaussian factor is dropped: seeds can have unit spread in
+    # every coordinate at any n without underflow (projective geometry unchanged)
+    return WaveSystem([v1, v2], relative_envelope=True), d
 
 
-def interface_points(S, count, rng, spread=None):
+def interface_points(S, count, rng, spread=1.0):
     n = S.n
     X0 = seed_near(np.zeros(n), count, n, rng, spread)
     X, h, normal, ok = project_to_interface(S, X0, 0, 1, iters=40)
     rho = (np.abs(S.evaluate(X)[0]) ** 2).sum(1)
-    keep = ok & (rho > 1e-200)
+    keep = ok & np.isfinite(rho) & (rho > 1e-200)
     return X[keep], normal[keep]
 
 
@@ -233,6 +235,7 @@ def run(seed: int = 0) -> dict:
         fig, axes = plt.subplots(len(ns_s), 4, figsize=(15.5, 3.75 * len(ns_s)))
         for i, n in enumerate(ns_s):
             S, d = make_pair(n, "carrier + 7 side-bands", np.random.default_rng(100 + i))
+            S = WaveSystem(S.volumes, relative_envelope=False)      # physical intensity in the slice
             kc = S[0].k[0]
             tang = kc - (kc @ d) * d / (d @ d)
             X, Sg, Tg, frame = plane_grid(np.zeros(n), d, tang, 2.4, 150)
@@ -269,7 +272,7 @@ def run(seed: int = 0) -> dict:
         prof = {}
         for kind in ("single wave", "carrier + 7 side-bands"):
             S, d = make_pair(n, kind, np.random.default_rng(7))
-            X, normal = interface_points(S, 500, np.random.default_rng(8))
+            X, normal = interface_points(S, 500, np.random.default_rng(8), spread=0.25)
             offs = np.linspace(-2.6, 2.6, 27)
             Xall = (X[:, None, :] + offs[None, :, None] * normal[:, None, :]).reshape(-1, n)
             g = geometry_factored_batched(S, Xall, max_degree=3, batch=1500, keep_frames=False)

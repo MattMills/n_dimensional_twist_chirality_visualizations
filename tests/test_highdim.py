@@ -152,3 +152,23 @@ def test_random_frame_image_preserves_gram():
     assert not np.allclose(K2, K)
     X = seed_near(np.zeros(4096), 10, 4096, rng)
     assert X.shape == (10, 4096) and np.linalg.norm(X, axis=1).max() < 30
+
+
+def test_relative_envelope_leaves_geometry_unchanged():
+    from twistchiral.systems import twisted_pair
+    S = twisted_pair(6, "simplex", k_scale=3.0, angles=[0.4, 1.0], displacement=[0.3, 0.2, 0.5, 0.1, 0.4, 0.2], width=1.0, amplitudes=0.3)
+    Sr = WaveSystem(S.volumes, relative_envelope=True)
+    X = np.random.default_rng(12).normal(0, 1.0, (50, 6))
+    q, qr = geometry_at(S, X), geometry_at(Sr, X)
+    assert np.allclose(q["A"], qr["A"]) and np.allclose(q["F"], qr["F"])
+    assert np.allclose(q["ladder"][3], qr["ladder"][3])
+    from twistchiral.interface import log_amplitude_ratio
+    assert np.allclose(log_amplitude_ratio(S, X, 0, 1)[0], log_amplitude_ratio(Sr, X, 0, 1)[0])
+    # no underflow at n = 16384 with unit spread
+    n = 16384
+    rng = np.random.default_rng(13)
+    big = WaveSystem([WaveVolume(k=3 * g.random_sphere(n, 1, rng), center=rng.normal(0, 0.02, n), width=1.0) for _ in range(2)],
+                     relative_envelope=True)
+    Xb = rng.normal(0, 1.0, (5, n))
+    rho = (np.abs(big.evaluate(Xb)[0]) ** 2).sum(1)
+    assert np.all(np.isfinite(rho)) and np.all(rho > 1e-200)

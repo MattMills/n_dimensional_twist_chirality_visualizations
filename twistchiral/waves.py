@@ -103,8 +103,15 @@ class WaveVolume:
         return float(np.exp(-0.5 * np.mean(np.log(np.linalg.eigvalsh(self._prec)))))
 
     # ------------------------------------------------------------------ evaluation
-    def evaluate(self, X, t: float = 0.0):
-        """Return ``(psi, dpsi)`` at points ``X`` of shape ``(P, n)``."""
+    def evaluate(self, X, t: float = 0.0, relative_envelope: bool = False):
+        """Return ``(psi, dpsi)`` at points ``X`` of shape ``(P, n)``.
+
+        With ``relative_envelope=True`` the factor ``exp(-x^T L x / 2)`` that
+        is common to all volumes of equal width is dropped, leaving the
+        envelope ``exp(x^T L c - c^T L c / 2)``.  Every projective quantity
+        (A, g, F, the chirality ladder, interfaces) is unchanged, and nothing
+        underflows however large ``n`` is.
+        """
         X = np.atleast_2d(np.asarray(X, dtype=float))
         phase = X @ self.k.T - self._omega[None, :] * t          # (P, m)
         E = self.amplitudes[None, :] * np.exp(1j * phase)        # (P, m)
@@ -112,10 +119,16 @@ class WaveVolume:
         dS = E @ (1j * self.k)                                   # (P, n)
         if self._prec is None:
             return S, dS
-        Y = X - self.center_at(t)[None, :]
-        LY = Y @ self._prec                                      # (P, n)
-        G = np.exp(-0.5 * np.einsum("pi,pi->p", Y, LY))         # (P,)
-        dG = -G[:, None] * LY                                    # (P, n)
+        c = self.center_at(t)
+        if relative_envelope:
+            Lc = self._prec @ c                                  # (n,)
+            G = np.exp(X @ Lc - 0.5 * (c @ Lc))                  # (P,)
+            dG = G[:, None] * Lc[None, :]
+        else:
+            Y = X - c[None, :]
+            LY = Y @ self._prec                                  # (P, n)
+            G = np.exp(-0.5 * np.einsum("pi,pi->p", Y, LY))     # (P,)
+            dG = -G[:, None] * LY                                # (P, n)
         psi = G * S
         dpsi = S[:, None] * dG + G[:, None] * dS
         return psi, dpsi
@@ -177,13 +190,18 @@ class WaveVolume:
 class WaveSystem:
     """An ordered collection of wave volumes interfering simultaneously."""
 
-    def __init__(self, volumes: Sequence[WaveVolume]):
+    def __init__(self, volumes: Sequence[WaveVolume], relative_envelope: bool = False):
         self.volumes = list(volumes)
         if not self.volumes:
             raise ValueError("need at least one volume")
         n = {v.n for v in self.volumes}
         if len(n) != 1:
             raise ValueError("all volumes must live in the same dimension")
+        self.relative_envelope = bool(relative_envelope)
+        if self.relative_envelope:
+            precs = [v._prec for v in self.volumes]
+            if any(p is None for p in precs) or any(not np.allclose(p, precs[0]) for p in precs):
+                raise ValueError("relative_envelope needs equal Gaussian widths for all volumes")
 
     # ------------------------------------------------------------------ basics
     @property
@@ -221,7 +239,7 @@ class WaveSystem:
         Psi = np.empty((X.shape[0], self.N), dtype=complex)
         dPsi = np.empty((X.shape[0], self.n, self.N), dtype=complex)
         for a, vol in enumerate(self.volumes):
-            psi, dpsi = vol.evaluate(X, t)
+            psi, dpsi = vol.evaluate(X, t, relative_envelope=self.relative_envelope)
             Psi[:, a] = psi
             dPsi[:, :, a] = dpsi
         return Psi, dPsi
@@ -235,7 +253,7 @@ class WaveSystem:
 
     # ------------------------------------------------------------------ transformations
     def transformed(self, R, shift=None) -> "WaveSystem":
-        return WaveSystem([v.transformed(R, shift) for v in self.volumes])
+        return WaveSystem([v.transformed(R, shift) for v in self.volumes], self.relative_envelope)
 
     def mirrored(self, normal) -> "WaveSystem":
         from .geometry import reflection
@@ -243,7 +261,7 @@ class WaveSystem:
 
     def with_relative_phases(self, thetas) -> "WaveSystem":
         thetas = np.broadcast_to(np.asarray(thetas, dtype=float), (self.N,))
-        return WaveSystem([v.with_phase(th) for v, th in zip(self.volumes, thetas)])
+        return WaveSystem([v.with_phase(th) for v, th in zip(self.volumes, thetas)], self.relative_envelope)
 
     def subsystem(self, members) -> "WaveSystem":
-        return WaveSystem([self.volumes[a] for a in members])
+        return WaveSystem([self.volumes[a] for a in members], self.relative_envelope)
