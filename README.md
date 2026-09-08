@@ -418,12 +418,26 @@ $n$ sets the ceiling; the wave content decides how much of it is used.
 
 ### 6.3 N volumes at high n, slices, and the profile
 
+The ladder degree was measured structurally (number of rotation planes with
+non-zero rate, plus whether $A$ leaves their span) at generic points where all
+$N$ volumes overlap, for $n\in\{16,32,64,128,256\}$ and
+$N\in\{2,\dots,129\}$: every entry equals $\min(n,2N-1)$. Where all volumes
+overlap, the twist becomes more isoclinic as $n$ grows at fixed $N$ (the ratio
+of smallest to largest rotation rate for $N=4$ rises from
+0.37 at $n=16$ to 0.87 at $n=256$; for $N=8$ from
+0.02 to 0.59) and less isoclinic as $N$ grows at fixed $n$.
+
 ![high-n ladder](figures/E_highdim_ladder.png)
-![high-n slices](figures/E_highdim_slices.png)
-![high-n profile](figures/E_highdim_profile.png)
 
 A low-dimensional slice of a high-dimensional interference sees only the
 wavevector components that lie in the slice; generic components scale as
 $1/\sqrt n$, so the same plane through the two centres shows an ever purer
-carrier interference as $n$ grows, while the $\operatorname{sech}^2(h/2)$
-profile across the interface is unchanged at $n=4096$.
+carrier interference as $n$ grows (local hot spots at $n=8$, a clean wavy wall
+by $n=512$).
+
+![high-n slices](figures/E_highdim_slices.png)
+
+The $\operatorname{sech}^2(h/2)$ profile across the interface is unchanged at
+$n=4096$ (correlation 0.998 for a single wave, 0.994 with side-bands).
+
+![high-n profile](figures/E_highdim_profile.png)
