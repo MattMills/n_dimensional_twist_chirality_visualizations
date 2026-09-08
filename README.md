@@ -441,3 +441,94 @@ The $\operatorname{sech}^2(h/2)$ profile across the interface is unchanged at
 $n=4096$ (correlation 0.998 for a single wave, 0.994 with side-bands).
 
 ![high-n profile](figures/E_highdim_profile.png)
+
+---
+
+## 7. Exact integer reformulation: the same story with every float removed
+
+Every quantity in this framework is a rational function of the field values
+and their first derivatives. The only transcendental inputs were the plane-wave
+phases and the Gaussian envelopes. Both disappear in the **lattice model** of
+`twistchiral/exact.py`:
+
+* positions are lattice points $x=\tfrac{\pi}{2}m$, $m\in\mathbb Z^n$, and wavevectors are integer vectors $K$, so every phase is a power of $i$: $e^{iK\cdot x}=i^{K\cdot m}$, a Gaussian integer;
+* the derivative with respect to the physical position brings down $iK$, so first derivatives are Gaussian integers too;
+* a *packet* is a carrier plus side-bands with Gaussian-integer amplitudes; its beat pattern is the envelope (period 4 in every direction: the system lives on the torus $(\mathbb Z/4)^n$);
+* a *twist* is a signed permutation matrix (the exact rotations of the lattice) and the exact phase group is multiplication by powers of $i$;
+* projective denominators are cleared: $\tilde A=\rho A$, $\tilde F=\rho^2F$, $\tilde A\wedge\tilde F=\rho^3 A\wedge F$, $\tilde F\wedge\tilde F=\rho^4F\wedge F$, … are integer-valued;
+* ranks come from fraction-free Bareiss elimination, norms are kept squared, direction statistics are exact rationals from Gram determinants, and the averages over random mirrors and random twists become exact averages over the coordinate designs $\{\pm e_i\}$.
+
+In this form the identities of §2–§3 are exact equalities of integers, checked
+at every lattice point. In particular the closed form becomes
+
+$$\rho_1\rho_2\,(\tilde A\wedge\tilde F)=\rho\;u_1\wedge u_2\wedge(\rho_2\nabla\rho_1-\rho_1\nabla\rho_2),\qquad u_a=\rho_a k_a=\mathrm{Re}(\bar\psi_a T_a),$$
+
+the pair twist factorises as $\tilde F=2\,x\wedge y$ with integer vectors
+$x,y$, pairwise additivity reads $\tilde F=\sum_{a<b}\tilde F_{ab}$, and the
+mirror law $1-2p/n$ is the combinatorial identity $\sum_i|\iota_{e_i}C|^2=p\,|C|^2$.
+The report below is `results/F_exact_integer.md` (full fractions in the JSON;
+decimals are truncated exact expansions, not floats).
+
+#### F1. Two twisted packets on the torus (Z/4)^n
+
+| n | points | ρ>0 | dominant 1 / 2 | exact ties | band V²≥½ | closed form exact | F~ = 2x∧y | phase-invariant | ranks of F~ | d_eff (band) | d_pop (band) | mean mirror cos | 1−6/n | saturation avg | 1−3/n+2/n² |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 3 | 64 | 64 | 44 / 20 | 24 | 54 | 64/64 | yes | yes | [2] | 1 | 1 | -1 | -1 | 0.2222… | 0.2222… |
+| 4 | 256 | 256 | 170 / 86 | 84 | 220 | 256/256 | yes | yes | [2] | 1.9723… | 1.9811… | -0.5000… | -0.5000… | 0.3750… | 0.3750… |
+| 5 | 1024 | 1024 | 680 / 344 | 336 | 880 | 1024/1024 | yes | yes | [2] | 2.7242… | 2.7400… | -0.2000… | -0.2000… | 0.4800… | 0.4800… |
+| 6 | 4096 | 4096 | 2720 / 1376 | 1344 | 3520 | 4096/4096 | yes | yes | [2] | 2.6794… | 2.6945… | 0 | 0 | 0.5555… | 0.5555… |
+
+In n = 3 the chirality A~∧F~ on the visibility band is a signed integer: 29 points positive, 25 negative, 0 zero; the integer screw chirality (K₁∧K₂)∧(μ₂−μ₁) of the carriers is 1.
+
+#### F2. N packets: highest non-zero chirality degree (exact) versus min(n, 2N − 1)
+
+| n \ N | 2 | 3 | 4 | 5 | 6 |
+|---|---|---|---|---|---|
+| 4 | 3 (rank 2) | 4★ (rank 4) | 4★ (rank 4) | 4★ (rank 4) | 4★ (rank 4) |
+| 5 | 3 (rank 2) | 5★ (rank 4) | 5★ (rank 4) | 5★ (rank 4) | 5★ (rank 4) |
+| 6 | 3 (rank 2) | 5 (rank 4) | 6★ (rank 6) | 6★ (rank 6) | 6★ (rank 6) |
+| 7 | 3 (rank 2) | 5 (rank 4) | 7★ (rank 6) | 7★ (rank 6) | 7★ (rank 6) |
+| 8 | 3 (rank 2) | 5 (rank 4) | 7 (rank 6) | 8★ (rank 8) | 8★ (rank 8) |
+
+Every entry equals min(n, 2N − 1): **yes**.  ★ = pseudoscalar.  Rank of F~ equals min(n − n mod 2, 2(N − 1)) at the best point.  Pairwise additivity F~ = Σ F~_ab exact at every tested point: **yes**.
+
+Dominance cells and junction cubes on the full torus (unit hypercubes whose corners carry ≥ 3, ≥ 4 distinct dominant packets):
+
+| n | N | cell sizes | ≥3-junction cubes | ≥4-junction cubes |
+|---|---|---|---|---|
+| 4 | 3 | [140, 72, 44] | 128 | 0 |
+| 4 | 4 | [119, 66, 42, 29] | 176 | 80 |
+| 5 | 3 | [560, 288, 176] | 512 | 0 |
+| 5 | 4 | [476, 264, 168, 116] | 704 | 320 |
+
+#### F3. Two packets in high dimension, component-free (Gram determinants)
+
+| n | points | closed form exact | rank F~ = 2 | d_eff | d_pop | mirror mean = 1−6/n | 1−6/n |
+|---|---|---|---|---|---|---|---|
+| 16 | 80 | 80/80 | yes | 6.8719… | 7.4237… | yes | 0.6250… |
+| 32 | 80 | 80/80 | yes | 6.5443… | 7.0383… | yes | 0.8125… |
+| 64 | 80 | 80/80 | yes | 7.1613… | 7.7671… | yes | 0.9062… |
+| 128 | 50 | 50/50 | yes | 6.0155… | 6.7015… | yes | 0.9531… |
+| 256 | 50 | 50/50 | yes | 6.8892… | 7.8303… | yes | 0.9765… |
+
+
+In $n=3$ the signed integer chirality on the visibility band is 29 points positive and 25 negative, with the integer screw chirality $(K_1\wedge K_2)\wedge(\mu_2-\mu_1)=1$ of the carriers (the field chirality carries the opposite sign to the geometric screw, as in §2.1).
+
+What did not survive the translation: the $2\pi$ flux quantum (an integral), and
+anything needing eigenvalues or square roots. What changed: Gaussian packets
+became beat packets on a 4-periodic torus, and the twist group shrank to signed
+permutations. With the 90° phase group the chirality directions on the interface
+spread over only a few dimensions; a finer cyclotomic order (e.g. 12th roots of
+unity, which keep all real parts rational) would widen it while staying exact.
+
+```python
+from twistchiral import exact as ex
+p1 = ex.Packet.carrier_with_sidebands([1, 0, 2, 0], [[1, 0, 0, 0], [0, 1, 0, 0]], (2, 0), (1, 1))
+p2 = p1.twisted(ex.plane_rotation_90(4, 0, 1), center=[1, 0, 3, 1]).with_phase(1)
+S = ex.LatticeSystem([p1, p2])
+Psi, T = S.evaluate(ex.torus_points(4))          # Gaussian integers at all 256 lattice points
+g = ex.exact_geometry(Psi, T)                    # rho, rho*A, rho^2*F as Python ints
+ea = ex.IntExterior(4)
+C = ea.wedge(g["A"], 1, ea.from_antisymmetric(g["F"]), 2)   # rho^3 * (A ^ F), integer 3-form
+print(ex.closed_form_identity(g, ex.pair_factors(Psi, T), ea).all())   # True, exactly
+```

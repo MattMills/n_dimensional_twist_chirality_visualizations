@@ -6,6 +6,7 @@ import two_volumes_4d
 import dimension_sweep
 import n_volumes
 import high_dimensions
+import exact_integer
 
 if __name__ == "__main__":
     summary = {
@@ -14,5 +15,6 @@ if __name__ == "__main__":
         "C_dimension_sweep": dimension_sweep.run(),
         "D_n_volumes": n_volumes.run(),
         "E_high_dimensions": high_dimensions.run(),
+        "F_exact_integer": exact_integer.run(),
     }
     dump(summary, "summary.json")
