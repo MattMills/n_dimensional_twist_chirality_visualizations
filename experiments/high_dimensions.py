@@ -63,10 +63,18 @@ def interface_points(S, count, rng, spread=1.0):
     return X[keep], normal[keep]
 
 
-def run(seed: int = 0) -> dict:
+ALL_PARTS = ("E1", "E2", "E3", "E4", "E5", "E6")
+
+
+def run(seed: int = 0, parts=ALL_PARTS) -> dict:
+    import json
+    from common import RES_DIR
     rng = np.random.default_rng(seed)
     kinds = ["single wave", "carrier + 7 side-bands", "n+1 equal waves (simplex)", "2n random waves"]
     res = {"n": N_LIST, "points": POINTS, "struct_cap": STRUCT_CAP}
+    prev = os.path.join(RES_DIR, "E_high_dimensions.json")
+    if parts != ALL_PARTS and os.path.exists(prev):
+        res.update(json.load(open(prev)))
     d_eff = {k: [] for k in kinds}
     d_pop = {k: [] for k in kinds}
     d_var = {k: [] for k in kinds}
@@ -75,7 +83,8 @@ def run(seed: int = 0) -> dict:
     saturation_cfg, saturation_field, closed_form_err = [], [], []
     kept = {k: [] for k in kinds}
 
-    with Timer("E1 two-volume interface statistics vs n"):
+    if "E1" in parts:
+      with Timer("E1 two-volume interface statistics vs n"):
         for n in N_LIST:
             P = POINTS if n < 8192 else (max(300, POINTS // 2) if n < 24576 else max(200, POINTS // 4))
             for kind in kinds:
@@ -119,7 +128,8 @@ def run(seed: int = 0) -> dict:
                     "saturation_field_median": saturation_field, "closed_form_max_rel_error": closed_form_err,
                     "components_C(n,3)": [comb(n, 3) for n in N_LIST]})
 
-    with Timer("E2 random-twist saturation statistics"):
+    if "E2" in parts:
+      with Timer("E2 random-twist saturation statistics"):
         sat_mean_sq = []
         for n in N_LIST:
             vals = []
@@ -132,8 +142,13 @@ def run(seed: int = 0) -> dict:
         res["saturation_mean_square"] = sat_mean_sq
         res["saturation_mean_square_predicted"] = [1 - 3 / n + 2 / n**2 for n in N_LIST]
 
-    with Timer("E3 figure: two-volume statistics vs n"):
-        ns = np.array(N_LIST)
+    if "E3" in parts:
+      with Timer("E3 figure: two-volume statistics vs n"):
+        ns = np.array(res["n"])
+        if "E1" not in parts:
+            d_eff, d_pop, mirror, seconds = (res["effective_dimension"], res["population_effective_dimension"],
+                                              res["mirror_mean_cosine"], res["ms_per_point"])
+            saturation_field, sat_mean_sq = res["saturation_field_median"], res["saturation_mean_square"]
         fig, axes = plt.subplots(2, 2, figsize=(12.5, 8.6))
         ax = axes[0, 0]
         for i, k in enumerate(kinds):
@@ -175,7 +190,8 @@ def run(seed: int = 0) -> dict:
         fig.tight_layout()
         save(fig, "E_highdim_two_volume_sweep.png")
 
-    with Timer("E4 ladder and twist isotropy for N volumes at high n"):
+    if "E4" in parts:
+      with Timer("E4 ladder and twist isotropy for N volumes at high n"):
         ns_l = [16, 32, 64, 128, 256]
         Ns_l = [2, 3, 4, 6, 8, 12, 16, 24, 32, 48, 64, 96, 129]
         table = {}
@@ -195,13 +211,18 @@ def run(seed: int = 0) -> dict:
                 Xj = seed_near(np.zeros(n), 40, n, rng, spread=0.05 / np.sqrt(n / 8))
                 Psi, dPsi = S.evaluate(Xj)
                 g = factored_geometry(Psi, dPsi)
-                norms = ladder_norms_factored(g, n)
-                nz = [p for p, v in norms.items() if np.median(v) > 1e-9 * np.median(norms[2]) ** (p // 2) * max(np.median(norms[1]), 1e-300) ** (p % 2)]
-                row.append(max(nz))
-                if max(nz) != min(n, 2 * N - 1):
-                    rank_ok = False
-                    print(f"  MISMATCH n={n} N={N}: measured {max(nz)} predicted {min(n, 2*N-1)}")
+                # structural criterion: the rung of degree 2k needs k rotation planes with
+                # non-zero rate, the rung of degree 2k+1 additionally a component of A
+                # outside them (norm-based thresholds fail for ~100 planes because of
+                # the k! and product-of-rates scaling of the top rungs)
                 rates = g["rates"]
+                r_eff = int(np.median((rates > 1e-8 * rates[:, :1]).sum(1)))
+                a_out = np.median(g["Ares2"] + (g["projA"][:, r_eff:].sum(1) if rates.shape[1] > r_eff else 0.0)) > 1e-12 * np.median(g["A2"])
+                deg = min(n, 2 * r_eff + (1 if a_out else 0))
+                row.append(deg)
+                if deg != min(n, 2 * N - 1):
+                    rank_ok = False
+                    print(f"  MISMATCH n={n} N={N}: measured {deg} predicted {min(n, 2*N-1)}")
                 r_eff = min(N - 1, n // 2)
                 isorow.append(float(np.median(rates[:, r_eff - 1] / rates[:, 0])) if r_eff >= 1 else np.nan)
             table[n] = row
@@ -230,7 +251,8 @@ def run(seed: int = 0) -> dict:
         fig.tight_layout()
         save(fig, "E_highdim_ladder.png")
 
-    with Timer("E5 slices of the interface at n = 8, 64, 512, 4096"):
+    if "E5" in parts:
+      with Timer("E5 slices of the interface at n = 8, 64, 512, 4096"):
         ns_s = [8, 64, 512, 4096]
         fig, axes = plt.subplots(len(ns_s), 4, figsize=(15.5, 3.75 * len(ns_s)))
         for i, n in enumerate(ns_s):
@@ -267,7 +289,8 @@ def run(seed: int = 0) -> dict:
         fig.tight_layout()
         save(fig, "E_highdim_slices.png")
 
-    with Timer("E6 localisation profile at n = 4096"):
+    if "E6" in parts:
+      with Timer("E6 localisation profile at n = 4096"):
         n = 4096
         prof = {}
         for kind in ("single wave", "carrier + 7 side-bands"):

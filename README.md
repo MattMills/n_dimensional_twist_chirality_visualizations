@@ -18,7 +18,9 @@ Binary chirality in $n$ dimensions needs at least $\lfloor n/2\rfloor + 1$
 simultaneous volumes.
 
 All figures below live in `figures/`, all numbers in `results/*.json`, and
-every closed-form statement is checked by `tests/` (47 tests).
+every closed-form statement is checked by `tests/` (64 tests). Section 6
+extends everything generically to arbitrary dimension and runs it to
+$n = 65\,536$.
 
 ---
 
@@ -273,8 +275,8 @@ overlap at once.
 
 ```bash
 pip install numpy scipy matplotlib scikit-image pytest
-python -m pytest -q tests            # 47 tests
-cd experiments && python run_all.py  # regenerates figures/ and results/
+python -m pytest -q tests            # 64 tests
+cd experiments && python run_all.py  # regenerates figures/ and results/ (~40 min; the n = 65 536 sweep dominates)
 ```
 
 ```python
@@ -299,6 +301,21 @@ S3 = tc.cluster(n=4, N=3, kind="simplex", spacing=1.7, rng=0)
 J = tc.sample_junction(S3, (0, 1, 2), count=3000, rng=0)["X"]
 rates, frames = tc.rotation_planes(tc.geometry_at(S3, J)["F"])   # two rotation planes at the junction
 print(tc.ladder_existence(S3, J))                                  # max degree 4 = min(4, 2*3-1)
+
+# any dimension, no exterior components: n = 20 000 in a few seconds
+from twistchiral.highdim import (random_frame_image, geometry_factored_batched, chirality3_kernel,
+                                 kernel_direction_spectrum, mirror_cosines, seed_near)
+n, rng = 20_000, np.random.default_rng(0)
+K = 3.0 * tc.geometry.random_sphere(n, 8, rng)                   # a carrier and 7 side-bands
+amp = np.full(8, 0.25, complex); amp[0] = 1.0
+d = rng.standard_normal(n); d *= 1.2 / np.linalg.norm(d)
+big = tc.WaveSystem([tc.WaveVolume(k=K, center=-d / 2, width=1.0, amplitudes=amp),
+                     tc.WaveVolume(k=random_frame_image(K, rng), center=d / 2, width=1.0, amplitudes=amp)],
+                    relative_envelope=True)                        # drop the common Gaussian: no underflow
+X, h, normal, ok = tc.project_to_interface(big, seed_near(np.zeros(n), 300, n, rng, spread=1.0))
+geo = geometry_factored_batched(big, X[ok], max_degree=3)         # rates, planes, |A^F|, ... in O(n) per point
+spec = kernel_direction_spectrum(chirality3_kernel(geo))
+print(spec["population_effective_dimension"], mirror_cosines(geo, rng.standard_normal(n)).mean())  # ~23, ~1 - 6/n
 ```
 
 Module map:
@@ -310,6 +327,103 @@ Module map:
 | `twistchiral/exterior.py` | batched exterior algebra: wedge, Hodge star, interior product, norms |
 | `twistchiral/qgt.py` | Berry connection, quantum metric, twist $F$, chirality ladder, rotation planes, pairwise decomposition |
 | `twistchiral/interface.py` | Newton / Gauss–Newton sampling of interfaces and junctions, dominance cells, Bloch data |
+| `twistchiral/highdim.py` | generic-$n$ machinery: factorised twist, ladder norms from rotation rates, Gram-determinant kernels, mirror cosines, underflow-free sampling |
 | `twistchiral/analysis.py` | closed forms, direction spectra, localisation profiles, invariance and mirror tests, ladder scans |
 | `twistchiral/slices.py`, `viz.py`, `style.py` | 2-/3-D slicing, marching-cubes interfaces, all figures |
-| `experiments/` | the four studies (`two_volumes_3d`, `two_volumes_4d`, `dimension_sweep`, `n_volumes`) |
+| `experiments/` | the five studies (`two_volumes_3d`, `two_volumes_4d`, `dimension_sweep`, `n_volumes`, `high_dimensions`) |
+
+---
+
+## 6. Generic n: pushing the dimension to 65 536
+
+Nothing above needs the $\binom n3$ components explicitly. The projector onto
+the complement of $\Psi$ in $\mathbb C^N$ has rank $N-1$, so with an
+orthonormal basis $\chi_c$ of that complement the geometric tensor factorises:
+
+$$Q=\frac{Z^\dagger Z}{\rho},\qquad Z_{c,i}=\chi_c^\dagger\partial_i\Psi,\qquad
+F=\frac{2}{\rho}\sum_{c=1}^{N-1}\mathrm{Re}\,Z_c\wedge\mathrm{Im}\,Z_c .$$
+
+The twist therefore lives in a subspace of dimension at most $2(N-1)$
+whatever $n$ is. Its rotation planes come from a $2(N-1)$-dimensional
+eigenproblem; every rung of the ladder has an exact norm in terms of the
+rotation rates $\lambda_j$ (with $e_k$ the elementary symmetric polynomials,
+$p_j$ the squared projection of $A$ on plane $j$ and $A_{\rm res}$ its
+residual outside all planes),
+
+$$|F^{\wedge k}|^2=(k!)^2\,e_k(\lambda^2),\qquad
+|A\wedge F^{\wedge k}|^2=(k!)^2\Big[|A_{\rm res}|^2\,e_k(\lambda^2)+\sum_j p_j\,e_k^{(-j)}(\lambda^2)\Big],$$
+
+and inner products between chiralities at different points are $3\times3$
+Gram determinants, which gives the direction spectrum from a $P\times P$
+kernel. The cost is linear in $n$ per point. Two further tricks remove the
+practical obstacles of high dimension: a Haar-random twist is applied as a
+random orthonormal frame (never an $n\times n$ matrix), and because every
+projective quantity is invariant under a common positive factor, the shared
+Gaussian $e^{-|x|^2/2\sigma^2}$ of equal-width volumes is simply dropped
+(`WaveSystem(relative_envelope=True)`), so interface points can be sampled
+with unit spread in every coordinate without underflow. `tests/test_highdim.py`
+checks all of this against the component-based code for $n\le 9$ and the
+identities at $n=64$ and $n=512$.
+
+On this 4-core, 15 GB machine the full characterisation of a two-volume
+interface (interface sampling, rotation planes, ladder norms, direction
+kernel, 96 mirror images) ran from $n=3$ to $n=65\,536$; the closed form
+stayed exact throughout (worst relative error $2\times10^{-15}$). The
+$N$-volume ladder ran to $n=256$ with up to 129 simultaneous volumes.
+
+### 6.1 Three exact high-dimensional laws
+
+* **A generic mirror stops reversing the chirality.** For a random
+  reflection, the expected cosine between a degree-$p$ chirality and its
+  mirror image is exactly $1-2p/n$ (proved by averaging $\Lambda^p R$ over
+  the sphere of normals; measured to within sampling error at every $n$). It
+  is $-1$ in three dimensions, $-\tfrac12$ in four, and $+0.9999$ at
+  $n=65\,536$. Only a pseudoscalar ($p=n$) is reversed by every mirror; a
+  high-dimensional chirality is reversed only by the mirrors whose normal lies
+  in its own $p$-plane.
+* **Generic twists become maximal.** For a Haar-random twist the saturation
+  $s=|k_1\wedge k_2\wedge d|/(|k_1||k_2||d|)$ has
+  $\mathbb E[s^2]=1-3/n+2/n^2$: in high dimension every generic twist is a
+  right-angle twist and the interface chirality reaches its maximal magnitude
+  ($s=0.58$ at $n=3$, $0.999$ at $n=256$, $1.000$ beyond).
+* **The ladder law survives.** The highest non-zero degree equals
+  $\min(n,2N-1)$ at every tested $(n,N)$ up to $n=256$, $N=129$: binary
+  chirality in 256 dimensions needs 129 simultaneous volumes.
+
+### 6.2 How many directions does the chirality explore?
+
+Effective dimension of the chirality directions on the interface (population
+estimate $1/\langle\cos^2\rangle$ over pairs of interface points, which has no
+sample-size ceiling):
+
+| n | $\binom n3$ | single wave | carrier + 7 side-bands | n+1 equal waves | 2n random waves | mirror cosine (meas. / 1−6/n) | twist saturation |
+|---|---|---|---|---|---|---|---|
+| 3 | 1 | 1 | 1 | 1 | 1 | −1.000 / −1.000 | 0.58 |
+| 8 | 56 | 1 | 8 | 55 | 35 | +0.15 / +0.25 | 0.41 |
+| 32 | 4 960 | 1 | 18 | 4 644 | 1 580 | +0.81 / +0.81 | 0.87 |
+| 128 | 341 376 | 1 | 22 | 257 855 | 83 561 | +0.95 / +0.95 | 0.96 |
+| 512 | 2.2 × 10⁷ | 1 | 23 | 8.3 × 10⁶ | 3.3 × 10⁶ | +0.989 / +0.988 | 0.998 |
+| 2 048 | 1.4 × 10⁹ | 1 | 23 | 1.4 × 10⁸ | 8.7 × 10⁷ | +0.997 / +0.997 | 0.999 |
+| 16 384 | 7.3 × 10¹¹ | 1 | 24 | – | – | +1.000 / +1.000 | 1.000 |
+| 65 536 | 4.7 × 10¹³ | 1 | 25 | – | – | +1.000 / +1.000 | 1.000 |
+
+The pattern is clean: a structureless volume always has a single chirality
+direction; a volume with a fixed number of waves saturates at a dimension set
+by its wave content (about 24 for a carrier with seven side-bands, independent
+of $n$); volumes whose wave content grows with $n$ explore a number of
+directions that tracks $\binom n3$ itself, $10^8$ by $n=2048$. The dimension
+$n$ sets the ceiling; the wave content decides how much of it is used.
+
+![high-n sweep](figures/E_highdim_two_volume_sweep.png)
+
+### 6.3 N volumes at high n, slices, and the profile
+
+![high-n ladder](figures/E_highdim_ladder.png)
+![high-n slices](figures/E_highdim_slices.png)
+![high-n profile](figures/E_highdim_profile.png)
+
+A low-dimensional slice of a high-dimensional interference sees only the
+wavevector components that lie in the slice; generic components scale as
+$1/\sqrt n$, so the same plane through the two centres shows an ever purer
+carrier interference as $n$ grows, while the $\operatorname{sech}^2(h/2)$
+profile across the interface is unchanged at $n=4096$.
