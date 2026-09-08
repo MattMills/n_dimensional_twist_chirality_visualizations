@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "twistchiral"
+version = "0.1.0"
+description = "Twist-chirality interfaces of interfering n-dimensional wave volumes"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = ["numpy>=1.24", "scipy>=1.10", "matplotlib>=3.7", "scikit-image>=0.21"]
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[tool.setuptools]
+packages = ["twistchiral"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

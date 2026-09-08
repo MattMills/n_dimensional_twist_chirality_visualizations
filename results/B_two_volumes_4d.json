@@ -1,0 +1,111 @@
+{
+  "n": 4,
+  "N": 2,
+  "twist_angles": [
+    0.5,
+    1.1
+  ],
+  "displacement": [
+    0.3,
+    0.5,
+    0.4,
+    0.9
+  ],
+  "axis_tangency_median_carrier + side-bands": 1.2463744624341058e-16,
+  "axis_tangency_median_5 equal waves": 1.0183768902482385e-16,
+  "spectrum_single wave": {
+    "eigenvalues": [
+      0.9999999999999991,
+      6.661338147750939e-16,
+      1.102622149927453e-33,
+      3.649654260399855e-35
+    ],
+    "effective_dimension": 1.0000000000000018,
+    "centered_eigenvalues": [
+      1.693611298073569e-15,
+      1.1026221499274524e-33,
+      3.649654260399868e-35,
+      0.0
+    ],
+    "variation_dimension": 1.0,
+    "alignment": 1.000000000000001,
+    "count": 6000
+  },
+  "single_wave_screw_prediction_error": 2.229968091510782e-15,
+  "relative_phase_invariance": {
+    "F": 1.2586454516507947e-14,
+    "C3": 2.4586827675631663e-15,
+    "intensity": 0.9953592786888746
+  },
+  "spectrum_carrier + side-bands": {
+    "eigenvalues": [
+      0.4915658172208418,
+      0.42487574386577415,
+      0.05905016573207022,
+      0.024508273181312296
+    ],
+    "effective_dimension": 2.3460744764077175,
+    "centered_eigenvalues": [
+      0.4280798345962709,
+      0.37432587609176093,
+      0.05904959247635673,
+      0.024180291133486735
+    ],
+    "variation_dimension": 2.395374511537783,
+    "alignment": 0.3381780680383089,
+    "count": 5899
+  },
+  "spectrum_5 equal waves": {
+    "eigenvalues": [
+      0.3231676571737295,
+      0.2848090959689185,
+      0.22332879325283853,
+      0.16869445360451338
+    ],
+    "effective_dimension": 3.7894990231746455,
+    "centered_eigenvalues": [
+      0.3194915815864712,
+      0.2744550484862035,
+      0.22329564274908134,
+      0.16788705314366512
+    ],
+    "variation_dimension": 3.7991367107829617,
+    "alignment": 0.12194537315773199,
+    "count": 5995
+  },
+  "spectrum_8 random waves": {
+    "eigenvalues": [
+      0.45771352000239407,
+      0.3241471593586319,
+      0.15192926928939243,
+      0.06621005134957984
+    ],
+    "effective_dimension": 2.9236404657895063,
+    "centered_eigenvalues": [
+      0.3969165410980168,
+      0.3241438792094471,
+      0.15164700754070634,
+      0.06373258453573599
+    ],
+    "variation_dimension": 3.0272997625772153,
+    "alignment": 0.2521110620660899,
+    "count": 5989
+  },
+  "mirror_3d": {
+    "tensor_error": 2.8726035846238707e-13,
+    "sign_flip_error": 2.8726035846238707e-13
+  },
+  "mirror_4d": {
+    "tensor_error": 6.367131475164891e-14,
+    "negated_fraction": 0.0323656990323657,
+    "mean_direction_cosine": -0.4985289764784613
+  },
+  "twist_sweep_single_wave": {
+    "max": 4.573797114860343,
+    "argmax_angles": [
+      0.8639379797371931,
+      3.141592653589793
+    ]
+  },
+  "twist_sweep_structured_corr_with_single": -0.282264797254931
+}

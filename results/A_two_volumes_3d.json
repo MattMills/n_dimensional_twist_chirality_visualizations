@@ -1,0 +1,89 @@
+{
+  "n": 3,
+  "N": 2,
+  "twist_angle": 0.7,
+  "displacement": [
+    0.5,
+    0.3,
+    1.1
+  ],
+  "k_scale": 3.0,
+  "surface_smooth": {
+    "vertices": 15753,
+    "sign_balance": {
+      "positive": 0.13229226179140482,
+      "negative": 0.8677077382085951,
+      "mean_sign": -0.7354154764171904
+    }
+  },
+  "surface_structured": {
+    "vertices": 33182,
+    "sign_balance": {
+      "positive": 0.5332107769272497,
+      "negative": 0.4667892230727503,
+      "mean_sign": 0.06642155385449942
+    }
+  },
+  "profile_smooth": {
+    "corr_F_vs_sech2": 0.9817290409209589,
+    "corr_C3_vs_sech2": 0.98575063232831
+  },
+  "profile_structured": {
+    "corr_F_vs_sech2": 0.9884404580384034,
+    "corr_C3_vs_sech2": 0.9678155936471066
+  },
+  "interface_smooth": {
+    "points": 7285,
+    "closed_form_max_rel_error": 6.492548093188911e-16,
+    "sign_balance": {
+      "positive": 0.17913520933424845,
+      "negative": 0.8208647906657516,
+      "mean_sign": -0.641729581331503
+    },
+    "sign_agreement_with_n^k1t^k2t": 1.0,
+    "relative_phase_invariance": {
+      "F": 1.943441068322179e-15,
+      "C3": 8.444035709994159e-16,
+      "intensity": 0.7640139259526096
+    },
+    "direction_spectrum": {
+      "eigenvalues": [
+        1.0000000000000677
+      ],
+      "effective_dimension": 0.9999999999998646,
+      "centered_eigenvalues": [
+        0.5881831444441719
+      ],
+      "variation_dimension": 1.0,
+      "alignment": 0.641729581331495,
+      "count": 7285
+    }
+  },
+  "interface_structured": {
+    "points": 7932,
+    "closed_form_max_rel_error": 1.9270596497924036e-15,
+    "sign_balance": {
+      "positive": 0.5353000504286435,
+      "negative": 0.4646999495713565,
+      "mean_sign": 0.07060010085728693
+    },
+    "sign_agreement_with_n^k1t^k2t": 1.0,
+    "relative_phase_invariance": {
+      "F": 1.0903017482997103e-14,
+      "C3": 1.438871205178325e-14,
+      "intensity": 1.1873560050044993
+    },
+    "direction_spectrum": {
+      "eigenvalues": [
+        1.0000000000000095
+      ],
+      "effective_dimension": 0.9999999999999809,
+      "centered_eigenvalues": [
+        0.9950156257589504
+      ],
+      "variation_dimension": 1.0,
+      "alignment": 0.07060010085728728,
+      "count": 7932
+    }
+  }
+}
