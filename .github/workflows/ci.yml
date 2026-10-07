@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# Jobs run on the self-hosted hippo runners; pull requests from forks run on GitHub-hosted
+# ubuntu-latest instead, so outside code never runs on hippo. The runners' job-started hook
+# cleans the workspace, so checkouts use `clean: false`; pip's cache persists on the runner.
+jobs:
+  python:
+    name: Python — tests
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || fromJSON('["self-hosted","hippo"]') }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          clean: false
+
+      - name: Install Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      # A per-job venv: the runner's interpreter is shared by every job it runs.
+      - name: Python venv
+        run: |
+          python -m venv "$RUNNER_TEMP/venv"
+          echo "$RUNNER_TEMP/venv/bin" >> "$GITHUB_PATH"
+
+      - name: Install the package
+        run: pip install --prefer-binary -e ".[test]"
+
+      # The closed-form checks in tests/; the experiments/ figure runs (~40 min)
+      # are not part of CI.
+      - name: Tests
+        run: python -m pytest -q tests
